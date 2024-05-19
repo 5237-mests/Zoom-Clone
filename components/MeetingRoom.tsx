@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
-import { CallControls, CallParticipantsList, CallStatsButton, CallingState, PaginatedGridLayout, SpeakerLayout, useCallStateHooks } from '@stream-io/video-react-sdk';
-import React, { useState } from 'react'
+import { CallControls, CallParticipantsList, CallStatsButton, CallingState, PaginatedGridLayout, SpeakerLayout, useCallStateHooks, useCall } from '@stream-io/video-react-sdk';
+import React, { useState, useEffect } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LayoutList, Users } from 'lucide-react';
+import { LayoutList, Users, HandIcon, Download } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import EndCallButton from './EndCallButton';
 import Loader from './Loader';
@@ -21,11 +21,34 @@ const MeetingRoom = () => {
   const isPersonalRoom = !!searchParams.get('personal');
 
   const router = useRouter();
+  const call = useCall();
 
   const [layout, setLayout] = useState<CallLayoutType>('speaker-left');
   const [showParticipants, setShowParticipants] = useState(false)
+  const [handRaised, setHandRaised] = useState(false)
 
-  const { useCallCallingState } = useCallStateHooks();
+  const raiseHand = async () => {
+    // const call: call;
+    setHandRaised(true)
+
+    await call?.sendReaction({
+      type: 'raise-hand',
+      emoji_code: ':raise-hand:',
+      custom: {
+        clearImmediate: false,
+      }
+    })
+  }
+
+  const { useCallCallingState, useParticipants } = useCallStateHooks();
+  const participants = useParticipants();
+  const downHand = async () => {
+    setHandRaised(false);
+
+    await call?.resetReaction(participants[0].sessionId)
+
+  }
+
 
   const callingState = useCallCallingState();
 
@@ -84,6 +107,42 @@ const MeetingRoom = () => {
             }
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <DropdownMenu>
+          <div className='flex items-center'>
+            <DropdownMenuTrigger className='cursor-pointer rounded-2xl bg-[#19232d] py-2 px-4 hover:bg-[#4c535b]'>
+              <HandIcon size={20} className="text-white"/>
+            </DropdownMenuTrigger>
+          </div>
+
+          <DropdownMenuContent
+            className="border-dark-1 bg-dark-1 text-white"
+          >
+            {
+              handRaised ? (
+                <div>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={downHand}
+                  >
+                    Down Hand
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="border-dark-1" />
+                </div>) : (
+                <div >
+                  <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={raiseHand}
+                  >
+                    Raise Hand
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="border-dark-1" />
+                </div>
+              )
+            }
+          </DropdownMenuContent>
+        </DropdownMenu>
+
 
         <CallStatsButton />
 
